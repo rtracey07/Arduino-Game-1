@@ -5,6 +5,7 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_NeoMatrix.h>
 #include <Adafruit_NeoPixel.h>
+#include "playerEntity.h"
 #ifndef PSTR
  #define PSTR // Make Arduino Due happy
 #endif
@@ -21,9 +22,6 @@
 #define ENEMY_SPEED 17    //Spawn rate of enemies.
 
 //Controls:
-#define LEFT 'z'          //Left button.
-#define RIGHT 'x'         //Right button.
-#define FIRE 32           //Fire (Space Bar).
 #define REPLAY 'v'        //Reset button.
 
 //Score Values:
@@ -37,7 +35,7 @@
 #define RESET 3
 
 Adafruit_NeoMatrix matrix = Adafruit_NeoMatrix(8, 8, PIN,
-  NEO_MATRIX_TOP     + NEO_MATRIX_RIGHT +
+  NEO_MATRIX_TOP     + NEO_MATRIX_LEFT +
   NEO_MATRIX_COLUMNS + NEO_MATRIX_PROGRESSIVE,
   NEO_GRB            + NEO_KHZ800);
 
@@ -51,8 +49,8 @@ int score = 0;            //Score counter.
 int hit = 0;              //Enemy hit counter.
 
 //Coordinates for enemies and missiles.
-int missiles[WIDTH][HEIGHT];  
-int enemies[WIDTH][HEIGHT];
+int missiles[HEIGHT][WIDTH];  
+int enemies[HEIGHT][WIDTH];
 
 //Start state.
 int state = PLAY;
@@ -101,7 +99,7 @@ void runGame(){
   newEnemy ++;     
   if(newEnemy == ENEMY_SPEED){
     newEnemy=0;
-    enemies[random(0,WIDTH)][0]=1;
+    enemies[0][random(0,WIDTH)]=1;
   }
 
   //Move player/fire.
@@ -110,7 +108,7 @@ void runGame(){
 
   //Update screen.
   matrix.fillScreen(0);
-  matrix.drawPixel(playerPosition,H_I, matrix.Color(0,60,255));
+  matrix.drawPixel(H_I, playerPosition, matrix.Color(0,60,255));
   updateMissiles();
   updateScore();
 
@@ -131,8 +129,8 @@ void reset(){
   playerPosition = 0;
   newEnemy = 0;
   
-  for(int i=0; i<WIDTH; i++)
-    for(int j=0; j<HEIGHT; j++)
+  for(int i=0; i<HEIGHT; i++)
+    for(int j=0; j<WIDTH; j++)
       enemies[i][j] = 0;
 
   state = PLAY;    
@@ -145,13 +143,13 @@ void playerAction(){
      else if(serialIn == LEFT && playerPosition > 0)
       playerPosition --;
      else if(serialIn == FIRE)
-      missiles[playerPosition][W_I]=1;
+      missiles[W_I][playerPosition]=1;
 }
 
 /** Move missiles to new positions and check for enemy hits.  */
 void updateMissiles(){
-  for(int i=0; i<WIDTH; i++){
-    for(int j=0; j<HEIGHT; j++){
+  for(int i=0; i<HEIGHT; i++){
+    for(int j=0; j<WIDTH; j++){
       if(missiles[i][j] == 1 && enemies[i][j] == 1){
         missiles[i][j]=0;
         enemies[i][j]=0;
@@ -164,8 +162,8 @@ void updateMissiles(){
       else if(missiles[i][j] == 1){
         matrix.drawPixel(i,j, matrix.Color(255,60,0));
         missiles[i][j]=0;
-        if(j!=0)
-          missiles[i][j-1]=1;
+        if(i!=0)
+          missiles[i-1][j]=1;
       }
     }
   }
@@ -173,81 +171,81 @@ void updateMissiles(){
 
 /** Move enemies to new position.  */
 void updateEnemies(){
-  for(int i=W_I; i>=0; i--)
-    for(int j=H_I; j>=0; j--)
+  for(int i=H_I; i>=0; i--)
+    for(int j=W_I; j>=0; j--)
       if(enemies[i][j] == 1){
         matrix.drawPixel(i,j, matrix.Color(255,255,0));
         enemies[i][j]=0;
-        if(j!=H_I)
-          enemies[i][j+1]=1;
+        if(i!=H_I)
+          enemies[i+1][j]=1;
       }
 }
 
 /** Refresh enemy position (not moved). */
 void showEnemies(){
-  for(int i=W_I; i>=0; i--)
-    for(int j=H_I; j>=0; j--)
+  for(int i=H_I; i>=0; i--)
+    for(int j=W_I; j>=0; j--)
       if(enemies[i][j] == 1)
         matrix.drawPixel(i,j, matrix.Color(255,255,0));
 }
 
 /** If enemy reaches last row, game over.  */
 void checkGameOver(){
-  for(int i=0; i<8; i++)
-    if(enemies[i][H_I]==1)
+  for(int i=0; i<WIDTH; i++)
+    if(enemies[H_I][i]==1)
       state = LOSE;
 }
 
 /** Sad face game over screen.  */
 void gameOverScreen(){
-  int y = matrix.Color(100,100,0);
-  int r = matrix.Color(255,0,0);
+  int o = matrix.Color(100,100,0);
+  int x = matrix.Color(255,0,0);
   int sadFace[8][8] = {
-    {y,y,y,y,y,y,y,y},
-    {r,y,r,y,y,r,y,r},
-    {y,r,y,y,y,y,r,y},
-    {r,y,r,y,y,r,y,r},
-    {y,y,y,y,y,y,y,y},
-    {y,y,r,r,r,r,y,y},
-    {y,r,y,y,y,y,r,y},
-    {y,y,y,y,y,y,y,y}
+    {o,o,o,o,o,o,o,o},
+    {x,o,x,o,o,x,o,x},
+    {o,x,o,o,o,o,x,o},
+    {x,o,x,o,o,x,o,x},
+    {o,o,o,o,o,o,o,o},
+    {o,o,x,x,x,x,o,o},
+    {o,x,o,o,o,o,x,o},
+    {o,o,o,o,o,o,o,o}
   };
 
   for(int i=0; i<8; i++)
     for(int j=0; j<8; j++)
-      matrix.drawPixel(j,i, sadFace[i][j]);
+      matrix.drawPixel(i,j, sadFace[i][j]);
 
   matrix.show();  
 }
 
 /** Happy face win screen.  */
 void winScreen(){
-  int g = matrix.Color(0,120,40);
-  int b = matrix.Color(180,180,180);
+  int o = matrix.Color(0,120,40);
+  int x = matrix.Color(180,180,180);
   int happyFace[8][8] = {
-    {g,g,g,g,g,g,g,g},
-    {g,b,g,g,g,g,b,g},
-    {b,b,b,g,g,b,b,b},
-    {g,b,g,g,g,g,b,g},
-    {g,g,g,g,g,g,g,g},
-    {g,b,g,g,g,g,b,g},
-    {g,g,b,b,b,b,g,g},
-    {g,g,g,g,g,g,g,g}
+    {o,o,o,o,o,o,o,o},
+    {o,x,o,o,o,o,x,o},
+    {x,x,x,o,o,x,x,x},
+    {o,x,o,o,o,o,x,o},
+    {o,o,o,o,o,o,o,o},
+    {o,x,o,o,o,o,x,o},
+    {o,o,x,x,x,x,o,o},
+    {o,o,o,o,o,o,o,o}
   };
 
   for(int i=0; i<8; i++)
     for(int j=0; j<8; j++)
-      matrix.drawPixel(j,i, happyFace[i][j]);
+      matrix.drawPixel(i,j, happyFace[i][j]);
 
   matrix.show();  
 }
 
-/** Incease score.  */
+/** Increase score.  */
 void updateScore(){
   if(score == WIN_SCORE)
     state = WIN;
   else  
     for(int i=0; i<score; i++)
-      matrix.drawPixel(7,i,matrix.Color(0,255,100));
+      matrix.drawPixel(i,7,matrix.Color(0,255,100));
 }
 
